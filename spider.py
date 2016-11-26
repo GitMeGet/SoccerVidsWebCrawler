@@ -2,6 +2,7 @@ from urllib2 import urlopen
 from link_finder import LinkFinder
 from general import *
 import webbrowser
+import os
 
 # Goes to a webpage and parses html code
 class Spider:
@@ -13,6 +14,7 @@ class Spider:
     queue_file = '' 
     crawled_file = ''
     watched_file = ''
+    video_folder = ''
     queue = set()
     crawled = set()
     watched = set()
@@ -24,10 +26,10 @@ class Spider:
         Spider.queue_file = Spider.project_name + '/queue.txt'
         Spider.crawled_file = Spider.project_name + '/crawled.txt'
         Spider.watched_file = Spider.project_name + '/watched.txt'
+        Spider.videos_folder = Spider.project_name + '/videos'
         self.boot()
-        self.crawl_page('First Spider', Spider.base_url)
+        self.crawl_page('Main Highlights', Spider.base_url)
         
-
     # First Spider creates project dir and data files (Q & crawled.txt)
     @staticmethod
     def boot():
@@ -60,6 +62,7 @@ class Spider:
             finder.feed(html_string)
         except IOError, e:
             print('Error: cannot crawl page')
+            print(e)
             return set()
         return finder.page_links()
 
@@ -76,15 +79,18 @@ class Spider:
                 continue
             if 'video' in url:
                 Spider.queue.add(url)
-
+                
     @staticmethod
     def update_files():
         set_to_file(Spider.queue, Spider.queue_file)
         set_to_file(Spider.crawled, Spider.crawled_file)
         set_to_file(Spider.watched, Spider.watched_file)
 
-
-
+    @staticmethod
+    def download_mp4():
+        for url in Spider.queue:         
+            youtube_dl(url)
+            move_mp4(os.getcwd(), Spider.videos_folder)
 
 
 
