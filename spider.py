@@ -1,8 +1,10 @@
 from urllib2 import urlopen
 from link_finder import LinkFinder
-from general import *
+from shared import *
 import webbrowser
 import os
+from url import Url
+import thread
 
 # Goes to a webpage and parses html code
 class Spider:
@@ -11,45 +13,32 @@ class Spider:
     project_name = ''
     base_url = '' # homepage url
     domain_name = '' # ensure connected to valid webpage
-    queue_file = '' 
-    crawled_file = ''
-    watched_file = ''
-    video_folder = ''
-    queue = set()
-    crawled = set()
-    watched = set()
+    queue = list()
+    crawled = list()
     
     def __init__(self, project_name, base_url, domain_name):
         Spider.project_name = project_name
         Spider.base_url = base_url
         Spider.domain_name = domain_name
-        Spider.queue_file = Spider.project_name + '/queue.txt'
-        Spider.crawled_file = Spider.project_name + '/crawled.txt'
-        Spider.watched_file = Spider.project_name + '/watched.txt'
-        Spider.videos_folder = Spider.project_name + '/videos'
+        Shared(project_name, base_url) # create dir + files if not created
         self.boot()
         self.crawl_page('Main Highlights', Spider.base_url)
         
-    # First Spider creates project dir and data files (Q & crawled.txt)
     @staticmethod
-    def boot():
-        create_project_dir(Spider.project_name)
-        create_data_files(Spider.project_name, Spider.base_url)
-        Spider.queue = file_to_set(Spider.queue_file)
-        Spider.crawled = file_to_set(Spider.crawled_file)
-        Spider.watched = file_to_set(Spider.watched_file)
+    def boot():     
+        Spider.queue = Shared.file_to_list(Shared.queue_file)
+        Spider.crawled = Shared.file_to_list(Shared.crawled_file)
 
     @staticmethod
     def crawl_page(thread_name, page_url):
-        if page_url not in Spider.crawled:
-            print(thread_name + ' now crawling ' + page_url)
-            print('Queue ' + str(len(Spider.queue))
-                  + ' | Crawled ' + str(len(Spider.crawled)))
-            Spider.add_links_to_queue(Spider.gather_links(page_url))
-            Spider.queue.remove(page_url)
-            Spider.crawled.add(page_url)
-            Spider.update_files()
-
+        # if page_url in Spider.crawled
+        print(thread_name + ' now crawling ' + page_url)
+        print('Queue ' + str(len(Spider.queue))
+              + ' | Crawled ' + str(len(Spider.crawled)))
+        Spider.add_links_to_queue(Spider.gather_links(page_url))
+        Spider.crawled.append(page_url)
+        Spider.update_files()
+                              
     @staticmethod
     def gather_links(page_url):
         html_string = ''
@@ -63,36 +52,41 @@ class Spider:
         except IOError, e:
             print('Error: cannot crawl page')
             print(e)
-            return set()
+            return list()
         return finder.page_links()
 
     @staticmethod
     def add_links_to_queue(links):
-        for url in links:
-            if url in Spider.queue:
+        for link in links:
+            print(link)
+            for url in Spider.queue:
+                if link == url.url:
+                    print('continued')
+                    continue                   
+            if Spider.domain_name not in link: # only crawl specified site  
                 continue
-            if url in Spider.crawled:
-                continue
-            if url in Spider.watched:
-                continue
-            if Spider.domain_name not in url: # only crawl specified site  
-                continue
-            if 'video' in url:
-                Spider.queue.add(url)
+            if 'video' in link:
+                Spider.queue.append(Url(link))
+                print('link added: ' + link)
                 
     @staticmethod
-    def update_files():
-        set_to_file(Spider.queue, Spider.queue_file)
-        set_to_file(Spider.crawled, Spider.crawled_file)
-        set_to_file(Spider.watched, Spider.watched_file)
-
-    @staticmethod
     def download_mp4():
-        for url in Spider.queue:         
-            youtube_dl(url)
-            move_mp4(os.getcwd(), Spider.videos_folder)
-
-
+        dl = 0
+        for url in Spider.queue:
+            print(url.status)
+            if url.status == 'none':
+                dl = 1
+                url.youtube_dl()
+                Spider.update_files()
+                Shared.move_mp4(os.getcwd(), os.getcwd() + '\\timesoccer\\videos\\')
+                #thread.start_new_thread(url.youtube_dl, ())
+        if dl == 0:
+            print("No videos to download")
+    
+    @staticmethod
+    def update_files():
+        Shared.list_to_file(Spider.queue, Shared.queue_file)
+        Shared.list_to_file(Spider.crawled, Shared.crawled_file)
 
 
             
