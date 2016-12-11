@@ -3,16 +3,13 @@ import re
 
 class Url:
 
-    status = ''
-    url = ''
-
     def __init__(self, url):
         self.status = 'none'
         self.url = url
 
     def youtube_dl(self):
         ydl_opts = {
-            'output': 'C:/Users/Yu Peng/Desktop/LearnPythonTheHardWay'
+            'outtmpl': 'C:/Users/Yu Peng/Desktop/LearnPythonTheHardWay/timesoccer/videos/%(title)s-%(id)s.%(ext)s'
         }
         with YoutubeDL(ydl_opts) as ydl:
             print('Downloading: ' + self.url)
